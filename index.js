@@ -322,6 +322,14 @@ app.get("/events", auth, (req, res) => {
   res.flushHeaders();
   sseClients.add(res);
   res.write(`data: ${JSON.stringify({ event: "status", data: { status, qr: status === "qr" ? currentQR : null } })}\n\n`);
+  // Send current chat list immediately so new connections don't miss contacts.set
+  if (chatStore.size > 0) {
+    const list = Array.from(chatStore.values())
+      .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
+      .slice(0, 80)
+      .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
+    res.write(`data: ${JSON.stringify({ event: "chats_ready", data: { chats: list } })}\n\n`);
+  }
   req.on("close", () => sseClients.delete(res));
 });
 
