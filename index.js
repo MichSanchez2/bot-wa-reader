@@ -218,9 +218,8 @@ app.post("/logout", auth, async (req, res) => {
 
 app.get("/chats", auth, (req, res) => {
   const list = Array.from(chatStore.values())
-    .filter(c => c.lastMsg)
     .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
-    .slice(0, 60)
+    .slice(0, 80)
     .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
   res.json(list);
 });
