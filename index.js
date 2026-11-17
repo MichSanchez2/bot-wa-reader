@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 3001;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const API_TOKEN = process.env.BOT_API_TOKEN || "dev-token";
 const AUTH_DIR = process.env.AUTH_DIR || "./auth_info";
+const CHATSTORE_FILE = "./chatstore.json";
 const MAX_MSGS = 50;
 
 const logger = pino({ level: "warn" });
@@ -33,6 +34,35 @@ let status = "disconnected";
 const chatStore = new Map();
 const sseClients = new Set();
 let chatsReadyTimer = null;
+let saveChatStoreTimer = null;
+
+// Load chatStore from disk on startup (survives spin-down restarts)
+function loadChatStoreFromDisk() {
+  try {
+    if (!fs.existsSync(CHATSTORE_FILE)) return;
+    const raw = fs.readFileSync(CHATSTORE_FILE, "utf8");
+    const entries = JSON.parse(raw);
+    for (const entry of entries) {
+      if (entry.jid) chatStore.set(entry.jid, { msgs: [], unread: 0, ...entry });
+    }
+    console.log(`💾 Loaded ${chatStore.size} chats from disk`);
+  } catch (e) {
+    console.log("⚠️ Could not load chatstore:", e.message);
+  }
+}
+
+function saveChatStoreToDisk() {
+  if (saveChatStoreTimer) clearTimeout(saveChatStoreTimer);
+  saveChatStoreTimer = setTimeout(() => {
+    try {
+      const entries = Array.from(chatStore.values())
+        .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
+      fs.writeFileSync(CHATSTORE_FILE, JSON.stringify(entries));
+    } catch {}
+  }, 3000);
+}
+
+loadChatStoreFromDisk();
 
 function broadcast(event, data) {
   const payload = `data: ${JSON.stringify({ event, data })}\n\n`;
@@ -50,6 +80,7 @@ function broadcastChatsReady() {
       .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
     console.log(`📡 chats_ready broadcast: ${list.length} chats`);
     broadcast("chats_ready", { chats: list });
+    saveChatStoreToDisk();
   }, 1500);
 }
 
@@ -67,6 +98,7 @@ function pushMessage(jid, msg) {
   chat.lastMsg = msg;
   if (!msg.fromMe) chat.unread++;
   broadcast("message", { jid, msg });
+  saveChatStoreToDisk();
 }
 
 // ─── Baileys ──────────────────────────────────────────────────────────────────
