@@ -103,6 +103,7 @@ async function startSocket() {
   });
 
   sock.ev.on("chats.set", ({ chats }) => {
+    console.log(`📋 chats.set: ${chats.length} chats recibidos`);
     for (const c of chats) {
       ensureChat(c.id, c.name || c.id.split("@")[0]);
       if (c.conversationTimestamp && chatStore.has(c.id)) {
@@ -112,16 +113,21 @@ async function startSocket() {
         };
       }
     }
+    console.log(`📋 chatStore size after chats.set: ${chatStore.size}`);
   });
 
   sock.ev.on("contacts.set", ({ contacts }) => {
+    console.log(`👤 contacts.set: ${contacts.length} contactos recibidos`);
+    let named = 0;
     for (const c of contacts) {
       const name = c.notify || c.name || c.verifiedName;
       if (c.id && name) {
+        named++;
         ensureChat(c.id, name);
         if (chatStore.has(c.id)) chatStore.get(c.id).name = name;
       }
     }
+    console.log(`👤 contacts con nombre: ${named}, chatStore size: ${chatStore.size}`);
     // Tell the UI the chat list is ready with names
     const list = Array.from(chatStore.values())
       .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
