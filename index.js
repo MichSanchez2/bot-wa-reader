@@ -143,8 +143,14 @@ async function startSocket() {
       console.log("❌ Disconnected, code:", code);
       if (loggedOut) {
         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+        setTimeout(startSocket, 2000);
+      } else if (code === 408 || code === 503) {
+        // Timeout / server unavailable — back off longer to avoid rate-limit loop
+        console.log("⏳ Timeout, waiting 30s before reconnect…");
+        setTimeout(startSocket, 30000);
+      } else {
+        setTimeout(startSocket, 5000);
       }
-      setTimeout(startSocket, 2000);
     }
   });
 
