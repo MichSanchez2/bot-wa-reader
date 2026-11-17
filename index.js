@@ -122,6 +122,38 @@ async function startSocket() {
         if (chatStore.has(c.id)) chatStore.get(c.id).name = name;
       }
     }
+    // Tell the UI the chat list is ready with names
+    const list = Array.from(chatStore.values())
+      .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
+      .slice(0, 80)
+      .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
+    broadcast("chats_ready", { chats: list });
+  });
+
+  sock.ev.on("messaging-history.set", ({ chats: hChats, messages: hMsgs }) => {
+    for (const c of (hChats || [])) {
+      const name = c.name || c.id?.split("@")[0];
+      if (c.id) ensureChat(c.id, name);
+      if (c.conversationTimestamp && chatStore.has(c.id)) {
+        const ch = chatStore.get(c.id);
+        ch.lastMsg = ch.lastMsg || { ts: c.conversationTimestamp, text: "" };
+      }
+    }
+    for (const m of (hMsgs || [])) {
+      if (!m.message) continue;
+      const jid = m.key?.remoteJid;
+      if (!jid || jid === "status@broadcast") continue;
+      const fromMe = m.key.fromMe;
+      const text =
+        m.message?.conversation ||
+        m.message?.extendedTextMessage?.text ||
+        (m.message?.imageMessage ? "[foto]" : m.message?.videoMessage ? "[video]" : "[media]");
+      const ts = m.messageTimestamp || 0;
+      const ch = ensureChat(jid);
+      if (!ch.lastMsg || ts > ch.lastMsg.ts) {
+        ch.lastMsg = { ts, text: text || "", fromMe };
+      }
+    }
   });
 
   sock.ev.on("contacts.update", (contacts) => {
