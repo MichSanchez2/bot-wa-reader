@@ -135,10 +135,17 @@ async function startSocket() {
     let named = 0;
     for (const c of contacts) {
       const name = c.notify || c.name || c.verifiedName;
-      if (c.id && name) {
-        named++;
+      if (!name) continue;
+      named++;
+      // Map by phone JID (@s.whatsapp.net)
+      if (c.id) {
         ensureChat(c.id, name);
         if (chatStore.has(c.id)) chatStore.get(c.id).name = name;
+      }
+      // Also map by LID (@lid) — new WhatsApp privacy protocol
+      if (c.lid) {
+        ensureChat(c.lid, name);
+        if (chatStore.has(c.lid)) chatStore.get(c.lid).name = name;
       }
     }
     console.log(`👤 contacts con nombre: ${named}, chatStore size: ${chatStore.size}`);
@@ -175,9 +182,15 @@ async function startSocket() {
 
   sock.ev.on("contacts.update", (contacts) => {
     for (const c of contacts) {
-      if (c.id && c.notify) {
-        ensureChat(c.id, c.notify);
-        chatStore.get(c.id).name = c.notify;
+      const name = c.notify || c.name;
+      if (!name) continue;
+      if (c.id) {
+        ensureChat(c.id, name);
+        if (chatStore.has(c.id)) chatStore.get(c.id).name = name;
+      }
+      if (c.lid) {
+        ensureChat(c.lid, name);
+        if (chatStore.has(c.lid)) chatStore.get(c.lid).name = name;
       }
     }
   });
