@@ -103,7 +103,25 @@ async function startSocket() {
   });
 
   sock.ev.on("chats.set", ({ chats }) => {
-    for (const c of chats) ensureChat(c.id, c.name || c.id.split("@")[0]);
+    for (const c of chats) {
+      ensureChat(c.id, c.name || c.id.split("@")[0]);
+      if (c.conversationTimestamp && chatStore.has(c.id)) {
+        chatStore.get(c.id).lastMsg = chatStore.get(c.id).lastMsg || {
+          ts: c.conversationTimestamp,
+          text: "",
+        };
+      }
+    }
+  });
+
+  sock.ev.on("contacts.set", ({ contacts }) => {
+    for (const c of contacts) {
+      const name = c.notify || c.name || c.verifiedName;
+      if (c.id && name) {
+        ensureChat(c.id, name);
+        if (chatStore.has(c.id)) chatStore.get(c.id).name = name;
+      }
+    }
   });
 
   sock.ev.on("contacts.update", (contacts) => {
