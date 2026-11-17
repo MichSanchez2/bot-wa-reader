@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "WhatsApp reader service for Two Travel concierge panel",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js"

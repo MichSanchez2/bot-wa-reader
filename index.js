@@ -1,17 +1,20 @@
-const {
-  default: makeWASocket,
+import {
+  default as makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  proto,
-} = require("@whiskeysockets/baileys");
-const express = require("express");
-const cors = require("cors");
-const qrcode = require("qrcode");
-const Anthropic = require("@anthropic-ai/sdk");
-const pino = require("pino");
-const path = require("path");
-const fs = require("fs");
+} from "@whiskeysockets/baileys";
+import express from "express";
+import cors from "cors";
+import qrcode from "qrcode";
+import Anthropic from "@anthropic-ai/sdk";
+import pino from "pino";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
@@ -93,7 +96,6 @@ async function startSocket() {
       broadcast("status", { status });
       console.log("❌ Disconnected, code:", code);
       if (loggedOut) {
-        // Clear auth and reconnect for fresh QR
         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
       }
       setTimeout(startSocket, 2000);
