@@ -117,7 +117,6 @@ async function startSocket() {
     auth: state,
     printQRInTerminal: true,
     browser: ["Two Travel Panel", "Chrome", "1.0"],
-    syncFullHistory: true,
     getMessage: async () => ({ conversation: "" }),
   });
 
