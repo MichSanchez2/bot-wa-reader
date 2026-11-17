@@ -1,0 +1,23 @@
+{
+  "name": "bot-wa-reader",
+  "version": "1.0.0",
+  "description": "WhatsApp reader service for Two Travel concierge panel",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "@anthropic-ai/sdk": "^0.37.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "qrcode": "^1.5.3",
+    "pino": "^9.0.0",
+    "pino-pretty": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
