@@ -32,12 +32,25 @@ let currentQR = null;
 let status = "disconnected";
 const chatStore = new Map();
 const sseClients = new Set();
+let chatsReadyTimer = null;
 
 function broadcast(event, data) {
   const payload = `data: ${JSON.stringify({ event, data })}\n\n`;
   for (const res of sseClients) {
     try { res.write(payload); } catch { sseClients.delete(res); }
   }
+}
+
+function broadcastChatsReady() {
+  if (chatsReadyTimer) clearTimeout(chatsReadyTimer);
+  chatsReadyTimer = setTimeout(() => {
+    const list = Array.from(chatStore.values())
+      .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
+      .slice(0, 80)
+      .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
+    console.log(`📡 chats_ready broadcast: ${list.length} chats`);
+    broadcast("chats_ready", { chats: list });
+  }, 1500);
 }
 
 function ensureChat(jid, name = "") {
@@ -72,6 +85,7 @@ async function startSocket() {
     auth: state,
     printQRInTerminal: true,
     browser: ["Two Travel Panel", "Chrome", "1.0"],
+    syncFullHistory: true,
     getMessage: async () => ({ conversation: "" }),
   });
 
@@ -128,12 +142,7 @@ async function startSocket() {
       }
     }
     console.log(`👤 contacts con nombre: ${named}, chatStore size: ${chatStore.size}`);
-    // Tell the UI the chat list is ready with names
-    const list = Array.from(chatStore.values())
-      .sort((a, b) => (b.lastMsg?.ts || 0) - (a.lastMsg?.ts || 0))
-      .slice(0, 80)
-      .map(({ jid, name, lastMsg, unread }) => ({ jid, name, lastMsg, unread }));
-    broadcast("chats_ready", { chats: list });
+    broadcastChatsReady();
   });
 
   sock.ev.on("messaging-history.set", ({ chats: hChats, messages: hMsgs }) => {
@@ -160,6 +169,8 @@ async function startSocket() {
         ch.lastMsg = { ts, text: text || "", fromMe };
       }
     }
+    console.log(`📜 messaging-history.set: chatStore size now ${chatStore.size}`);
+    broadcastChatsReady();
   });
 
   sock.ev.on("contacts.update", (contacts) => {
