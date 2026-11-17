@@ -153,6 +153,55 @@ function auth(req, res, next) {
 
 app.get("/", (req, res) => res.json({ service: "bot-wa-reader", status }));
 
+app.get("/qr", auth, (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WhatsApp QR — Two Travel</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#111;color:#eee;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;gap:20px}
+h1{font-size:1.2rem;color:#aaa}
+#badge{padding:6px 16px;border-radius:999px;font-size:.9rem;font-weight:600}
+.qr{background:#25d366;color:#000}.connecting{background:#555;color:#eee}.connected{background:#128c7e;color:#fff}.disconnected{background:#c00;color:#fff}
+#qr-box{background:#fff;padding:16px;border-radius:12px;display:none}
+#qr-box img{display:block;width:260px;height:260px}
+#ok{display:none;font-size:1.5rem;color:#25d366}
+#msg{font-size:.85rem;color:#aaa;text-align:center;max-width:320px}
+</style></head><body>
+<h1>🤖 Two Travel — WhatsApp Reader</h1>
+<span id="badge" class="connecting">Conectando…</span>
+<div id="qr-box"><img id="qr-img" src="" alt="QR"></div>
+<div id="ok">✅ ¡WhatsApp conectado!</div>
+<p id="msg">Esperando QR del servidor…</p>
+<script>
+const TOKEN="${API_TOKEN}";
+async function poll(){
+  try{
+    const d=await fetch("/status?token="+TOKEN).then(r=>r.json());
+    const badge=document.getElementById("badge"),qrBox=document.getElementById("qr-box"),
+          qrImg=document.getElementById("qr-img"),ok=document.getElementById("ok"),msg=document.getElementById("msg");
+    if(d.status==="qr"&&d.qr){
+      badge.textContent="Escanea el QR";badge.className="badge qr";
+      qrImg.src=d.qr;qrBox.style.display="block";ok.style.display="none";
+      msg.textContent="Abre WhatsApp → Dispositivos vinculados → Vincular un dispositivo → escanea este código";
+    }else if(d.status==="connected"){
+      badge.textContent="Conectado ✓";badge.className="badge connected";
+      qrBox.style.display="none";ok.style.display="block";
+      msg.textContent="Ya puedes usar el Bot Asistente en el Concierge Panel";return;
+    }else if(d.status==="connecting"){
+      badge.textContent="Conectando…";badge.className="badge connecting";
+      msg.textContent="Iniciando conexión con WhatsApp…";
+    }else{
+      badge.textContent=d.status;badge.className="badge disconnected";
+      msg.textContent="Reconectando…";
+    }
+  }catch(e){msg.textContent="⏳ Reintentando…";}
+  setTimeout(poll,3000);
+}
+poll();
+</script></body></html>`);
+});
+
 app.get("/status", auth, (req, res) =>
   res.json({ status, qr: status === "qr" ? currentQR : null })
 );
